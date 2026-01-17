@@ -12,3 +12,4 @@ httpx
 sqlalchemy
 psycopg2
 alembic
+livekit-plugins-bey

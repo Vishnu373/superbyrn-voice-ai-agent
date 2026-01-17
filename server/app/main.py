@@ -14,7 +14,7 @@ from database.db_client import (
     get_all_appointments, get_user_appointments, book_appointment,
     cancel_appointment, modify_appointment, get_available_slots,
     get_user_by_phone, get_or_create_user, get_call_summaries_by_phone,
-    get_db
+    get_all_summaries, get_db
 )
 from database.models import Appointment, Slot, User, CallSummary
 
@@ -48,25 +48,27 @@ class CreateUserRequest(BaseModel):
 class LiveKitTokenRequest(BaseModel):
     phone: str
 
-class AppointmentResponse(BaseModel):
-    id: str
-    user_phone: str
-    slot_id: str
-    patient_name: str
-    status: str
-    notes: Optional[str]
-    booked_at: datetime
-    updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
 class SlotResponse(BaseModel):
     id: str
     day_of_week: str
     start_time: str
     end_time: str
     is_available: bool
+
+    class Config:
+        from_attributes = True
+
+class AppointmentResponse(BaseModel):
+    id: str
+    user_phone: Optional[str]
+    slot_id: str
+    patient_name: str
+    patient_phone: Optional[str]
+    status: str
+    notes: Optional[str]
+    booked_at: datetime
+    updated_at: datetime
+    slot: Optional[SlotResponse] = None
 
     class Config:
         from_attributes = True
@@ -83,6 +85,9 @@ class CallSummaryResponse(BaseModel):
     id: str
     patient_phone: Optional[str]
     summary_text: Optional[str]
+    call_duration_seconds: Optional[int] = None
+    total_cost: Optional[float] = None
+    cost_breakdown: Optional[dict] = None
     created_at: datetime
 
     class Config:
@@ -97,22 +102,43 @@ async def root():
 Get all appointments (admin)
 Returns list of all appointments in the system
 """
-@app.get("/v1/appointments", response_model=List[AppointmentResponse])
+@app.get("/v1/appointments")
 async def list_all_appointments():
     appointments = get_all_appointments(include_cancelled=True)
     if not appointments:
-        raise HTTPException(status_code=404, detail="No appointments found")
-
-    return [AppointmentResponse(
-        id=str(appt.id),
-        user_phone=appt.user_phone,
-        slot_id=str(appt.slot_id),
-        patient_name=appt.patient_name,
-        status=appt.status,
-        notes=appt.notes,
-        booked_at=appt.booked_at,
-        updated_at=appt.updated_at
-    ) for appt in appointments]
+        return []
+    
+    db = get_db()
+    try:
+        result = []
+        for appt in appointments:
+            # Get slot info
+            slot = db.query(Slot).filter(Slot.id == appt.slot_id).first()
+            slot_data = None
+            if slot:
+                slot_data = {
+                    "id": str(slot.id),
+                    "day_of_week": slot.day_of_week,
+                    "start_time": slot.start_time.strftime("%I:%M %p") if slot.start_time else "",
+                    "end_time": slot.end_time.strftime("%I:%M %p") if slot.end_time else "",
+                    "is_available": slot.is_available
+                }
+            
+            result.append({
+                "id": str(appt.id),
+                "user_phone": appt.user_phone,
+                "slot_id": str(appt.slot_id),
+                "patient_name": appt.patient_name,
+                "patient_phone": appt.patient_phone,
+                "status": appt.status,
+                "notes": appt.notes,
+                "booked_at": appt.booked_at,
+                "updated_at": appt.updated_at,
+                "slot": slot_data
+            })
+        return result
+    finally:
+        db.close()
 
 
 """
@@ -312,11 +338,66 @@ async def get_summaries_by_phone(phone: str):
         id=str(summary.id),
         patient_phone=summary.patient_phone,
         summary_text=summary.summary_text,
+        call_duration_seconds=summary.call_duration_seconds,
+        total_cost=summary.total_cost,
+        cost_breakdown=summary.cost_breakdown,
         created_at=summary.created_at
     ) for summary in summaries]
 
 
-# 5. LiveKit Endpoints
+# 5. Billing Endpoints
+"""
+Get billing summary for all calls (admin)
+Returns total cost and all call summaries
+"""
+@app.get("/v1/billing")
+async def get_all_billing():
+    summaries = get_all_summaries()
+    total_cost = sum(float(s.total_cost or 0) for s in summaries)
+    total_calls = len(summaries)
+    
+    return {
+        "total_cost": round(total_cost, 4),
+        "total_calls": total_calls,
+        "summaries": [
+            {
+                "phone": s.patient_phone,
+                "duration_seconds": s.call_duration_seconds,
+                "total_cost": float(s.total_cost or 0),
+                "cost_breakdown": s.cost_breakdown,
+                "created_at": s.created_at.isoformat() if s.created_at else None
+            }
+            for s in summaries
+        ]
+    }
+
+
+"""
+Get billing for specific user
+Returns total cost and call summaries for one user
+"""
+@app.get("/v1/billing/{phone}")
+async def get_user_billing(phone: str):
+    summaries = get_call_summaries_by_phone(phone)
+    total_cost = sum(float(s.total_cost or 0) for s in summaries)
+    
+    return {
+        "phone": phone,
+        "total_cost": round(total_cost, 4),
+        "total_calls": len(summaries),
+        "summaries": [
+            {
+                "duration_seconds": s.call_duration_seconds,
+                "total_cost": float(s.total_cost or 0),
+                "cost_breakdown": s.cost_breakdown,
+                "created_at": s.created_at.isoformat() if s.created_at else None
+            }
+            for s in summaries
+        ]
+    }
+
+
+# 6. LiveKit Endpoints
 """
 Generate LiveKit room token
 Creates access token for frontend to join LiveKit room
@@ -338,7 +419,9 @@ async def generate_livekit_token(request: LiveKitTokenRequest):
     token.with_name(request.phone)
     token.with_grants(api.VideoGrants(
         room_join=True,
+        room_create=True,
         room=room_name,
+        agent=True,
     ))
     
     return {

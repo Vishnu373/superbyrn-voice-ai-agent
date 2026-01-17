@@ -208,3 +208,11 @@ def get_call_summaries_by_phone(phone: str) -> List[CallSummary]:
         return db.query(CallSummary).filter(CallSummary.patient_phone == phone).all()
     finally:
         db.close()
+
+# CRUD -> reading all call summaries -> for admin billing
+def get_all_summaries() -> List[CallSummary]:
+    db = get_db()
+    try:
+        return db.query(CallSummary).all()
+    finally:
+        db.close()
