@@ -16,6 +16,7 @@ graph LR
         C[Deepgram STT]
         D[Cartesia TTS]
         E[OpenAI GPT-4.1]
+        F[Beyond Presence Avatar]
     end
     
     subgraph Database
@@ -26,6 +27,8 @@ graph LR
     B --> C
     B --> D
     B --> E
+    D -->|TTS Audio| F
+    F -->|Video Stream| A
     B --> G
 ```
 
@@ -52,14 +55,16 @@ flowchart LR
 - **OpenAI GPT-4.1** processes the text and decides what tool to call
 - **Tools** interact with Supabase database (book, cancel, modify appointments)
 - **Cartesia TTS** converts response text back to speech
-- **User hears** the agent's response
+- **Beyond Presence** receives TTS audio and generates lip-synced avatar video
+- **User sees** the avatar speaking and hears the response
 
 ## Components
 
-- **LiveKit Cloud** - Handles real-time voice communication
+- **LiveKit Cloud** - Handles real-time voice and video communication
 - **Deepgram Flux** - Speech-to-text conversion
 - **OpenAI GPT-4.1-mini** - Language model for conversation and tool calling
 - **Cartesia Sonic** - Text-to-speech for natural voice output
+- **Beyond Presence** - AI avatar with real-time lip-sync
 - **Supabase** - PostgreSQL database for users, slots, and appointments
 
 ## Data Flow
