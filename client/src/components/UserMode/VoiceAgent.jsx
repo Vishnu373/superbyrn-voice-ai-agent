@@ -63,7 +63,7 @@ const VoiceAgent = () => {
             token={token}
             connect={true}
             audio={true}
-            video={false}
+            video={true}
             onDisconnected={() => setShowSummary(true)}
         >
             <RoomAudioRenderer />
