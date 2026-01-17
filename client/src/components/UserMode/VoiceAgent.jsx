@@ -30,7 +30,15 @@ const VoiceAgent = () => {
     if (showSummary) {
         return (
             <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
-                <CallSummary phone={sessionId} onDismiss={() => window.location.reload()} />
+                <CallSummary
+                    phone={sessionId}
+                    onDismiss={() => {
+                        setShowSummary(false);
+                        setToken(null);
+                        setSessionId('');
+                        // This triggers the useEffect to fetch a new token
+                    }}
+                />
             </div>
         );
     }
