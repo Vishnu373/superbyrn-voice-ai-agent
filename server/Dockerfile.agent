@@ -2,10 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY server/requirements.txt .
+COPY requirements.txt .
 RUN pip install -r requirements.txt
 RUN python -m livekit.plugins.turn_detector.download_model
 
-COPY server/ .
+COPY . .
 
 CMD ["python", "app/agent_orchestrator.py", "start"]
