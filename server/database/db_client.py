@@ -1,19 +1,40 @@
 import os
+import logging
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.pool import QueuePool
 from dotenv import load_dotenv
 from .models import User, Slot, Appointment, CallSummary
 
 load_dotenv()
 
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL:
-    engine = create_engine(DATABASE_URL)
-    SessionLocal = sessionmaker(bind=engine)
+    logger.info("DATABASE_URL found, initializing database connection...")
+    try:
+        engine = create_engine(
+            DATABASE_URL,
+            poolclass=QueuePool,
+            pool_size=5,
+            max_overflow=10,
+            pool_pre_ping=True,
+            pool_recycle=300,  
+        )
+        SessionLocal = sessionmaker(bind=engine)
+        logger.info("Database engine created successfully")
+    except Exception as e:
+        logger.error(f"Failed to create database engine: {e}")
+        engine = None
+        SessionLocal = None
 else:
+    logger.warning("DATABASE_URL not found in environment variables!")
     engine = None
     SessionLocal = None
 
