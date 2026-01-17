@@ -2,6 +2,37 @@
 
 A voice-powered appointment booking system with an AI avatar.
 
+## Project Structure
+
+```
+superbyrn-voice-ai-agent/
+├── client/                    # Frontend (React + Vite)
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── AdminMode/     # Admin dashboard components
+│   │   │   ├── UserMode/      # Patient mode components
+│   │   │   └── LandingPage.jsx
+│   │   ├── services/          # API and LiveKit services
+│   │   ├── App.jsx
+│   │   └── main.jsx
+│   └── package.json
+│
+├── server/                    # Backend (FastAPI + LiveKit)
+│   ├── app/
+│   │   ├── main.py            # FastAPI endpoints
+│   │   ├── agent_orchestrator.py  # LiveKit agent
+│   │   ├── agent_tools.py     # Agent tools (book, cancel, etc)
+│   │   ├── cost_tracker.py    # Cost calculation
+│   │   └── prompts.py         # Agent prompts
+│   ├── database/
+│   │   ├── models.py          # SQLAlchemy models
+│   │   └── db_client.py       # Database operations
+│   └── requirements.txt
+│
+└── docs/                      # Documentation
+    └── architecture.md
+```
+
 ## Features
 
 ### Admin Dashboard
