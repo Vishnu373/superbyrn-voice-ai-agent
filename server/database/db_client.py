@@ -9,10 +9,17 @@ from .models import User, Slot, Appointment, CallSummary
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine)
+
+if DATABASE_URL:
+    engine = create_engine(DATABASE_URL)
+    SessionLocal = sessionmaker(bind=engine)
+else:
+    engine = None
+    SessionLocal = None
 
 def get_db() -> Session:
+    if SessionLocal is None:
+        raise ValueError("Database config not found. Please set DATABASE_URL environment variable.")
     return SessionLocal()
 
 # CRUD -> reading a user -> for admin
