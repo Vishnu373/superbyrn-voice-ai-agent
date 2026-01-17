@@ -1,0 +1,14 @@
+livekit-agents[silero,turn-detector]
+livekit-plugins-noise-cancellation
+livekit-plugins-deepgram
+livekit-plugins-cartesia
+livekit-plugins-openai
+python-dotenv
+fastapi
+uvicorn
+supabase
+pydantic
+httpx
+sqlalchemy
+psycopg2
+alembic
