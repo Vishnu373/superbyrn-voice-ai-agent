@@ -12,20 +12,24 @@ const VoiceAgent = () => {
     const [token, setToken] = useState(null);
     const [sessionId, setSessionId] = useState('');
     const [showSummary, setShowSummary] = useState(false);
+    const [error, setError] = useState(null);
+    const [retryCount, setRetryCount] = useState(0);
 
     useEffect(() => {
         const fetchToken = async () => {
             const tempId = `guest-${Math.random().toString(36).substr(2, 9)}`;
             setSessionId(tempId);
+            setError(null);
             try {
                 const { token } = await apiService.getLiveKitToken(tempId);
                 setToken(token);
             } catch (err) {
                 console.error('Failed to get token:', err);
+                setError('Failed to connect to the voice agent. Please check your connection and try again.');
             }
         };
         fetchToken();
-    }, []);
+    }, [retryCount]);
 
     if (showSummary) {
         return (
@@ -36,9 +40,34 @@ const VoiceAgent = () => {
                         setShowSummary(false);
                         setToken(null);
                         setSessionId('');
+                        setError(null);
+                        setRetryCount(0);
                         // This triggers the useEffect to fetch a new token
                     }}
                 />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80vh' }}>
+                <div className="glass-panel" style={{ padding: '3rem', width: '100%', maxWidth: '500px', textAlign: 'center' }}>
+                    <h2 style={{ marginBottom: '1rem', color: 'var(--danger)' }}>Connection Failed</h2>
+                    <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+                        {error}
+                    </p>
+                    <button
+                        className="btn-primary"
+                        onClick={() => {
+                            setError(null);
+                            setRetryCount(c => c + 1);
+                        }}
+                        style={{ minWidth: '150px' }}
+                    >
+                        Try Again
+                    </button>
+                </div>
             </div>
         );
     }

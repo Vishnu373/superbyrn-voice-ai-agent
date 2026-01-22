@@ -66,6 +66,22 @@ async def appointment_agent(ctx: agents.JobContext):
     # Start Beyond Presence avatar (joins room and syncs with TTS)
     await avatar.start(room=ctx.room, agent_session=session)
 
+    # Wait for a participant to join the room before greeting
+    async def wait_for_participant():
+        while True:
+            participants = ctx.room.remote_participants
+            if len(participants) > 0:
+                # Give audio a moment to establish
+                await asyncio.sleep(0.5)
+                return
+            await asyncio.sleep(0.1)
+    
+    try:
+        await asyncio.wait_for(wait_for_participant(), timeout=30.0)
+    except asyncio.TimeoutError:
+        print("No participant joined within 30 seconds")
+        return
+
     await session.generate_reply(
         instructions="Greet the patient warmly and ask for their phone number."
     )
